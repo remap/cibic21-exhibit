@@ -27,6 +27,8 @@ If you're running TouchDesigner on Windows, something might not work. Take a loo
   * `td_utils`
   * `aws`
 
+`modules` has custom parameters to setup AWS helper code. It will expect AWS credentials named "sudomagic-dev" or "sudomagic-exhibit" in your ".aws/credentials" file. 
+
 
 
 ## CiBiC 2021 TouchDesigner Components

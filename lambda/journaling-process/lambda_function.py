@@ -30,16 +30,31 @@ def lambda_handler(event, context):
                         TableName = CibicResources.DynamoDB.JournalingRequests,
                         Key=rec['dynamodb']['Keys'])
                     request = unmarshallAwsDataItem(item['Item'])
+
+                    journal_data = json.loads( request['body'] )
+
                     print('processing journaling request {} ({}), data {}'
                             .format(request['requestId'], request['timestamp'], request['body']))
 
                     # store data in DynamoDB table
+                    time_now = int(time.time())
                     journalingDataTable.put_item(Item = {
-                        'requestId': request['requestId'],
-                        'body': request['body']
+                        'userId': journal_data['userId'],
+                        'sortKey': "journal-" + str(time_now),
+                        'created': time_now,
+                        'request': request,
+                        'dbVersion': 0,
+                        'role': journal_data['role'],
+                        'media': journal_data['image'],
+                        'type': journal_data['type']
                     })
                     # store processed id here for SNS notify later
-                    processedIds.append(request['requestId'])
+                    processedIds.append(    
+                        {   
+                            "userId": journal_data['userId'],
+                            "sortKey": "journal-"+str(time_now)
+                        }
+                    )
 
             snsClient.publish(
                     TopicArn=snsTopicArn,

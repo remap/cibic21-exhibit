@@ -27,7 +27,7 @@ def lambda_handler(event, context):
             for rec in event['Records']:
                 if rec['eventName'] == 'INSERT': # when new data inserted
                     item = dynamoDbClient.get_item(
-                        TableName = CibicResources.DynamoDB.JournalingRequests,
+                        TableName = CibicResources.DynamoDB.ModeratedJournalingRequests,
                         Key=rec['dynamodb']['Keys'])
                     request = unmarshallAwsDataItem(item['Item'])
 

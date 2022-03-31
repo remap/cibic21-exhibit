@@ -35,6 +35,22 @@ def lambda_handler(event, context):
 
                     print('processing journaling request {} ({}), data {}'
                             .format(request['requestId'], request['timestamp'], request['body']))
+                    
+                    # Create base record 
+                    ProcessedRecord = {
+                        'requestId': request['requestId'],
+                        'body': request['body'],
+                    }
+
+                    # Parse request body
+                    requestData = json.loads(request['body'])
+                    
+                    if 'userid' in requestData:
+                        # Request can be correlated to user
+                        ProcessedRecord.update(requestData)
+                        ProcessedRecord['GSI1PK'] = requestData['userid']
+
+
 
                     # store data in DynamoDB table
                     time_now = int(time.time())

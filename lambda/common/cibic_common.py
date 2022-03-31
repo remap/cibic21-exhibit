@@ -15,11 +15,23 @@ import math
 ################################################################################
 class CibicResources():
     class DynamoDB():
+        # By default, table names are for the prod stage. For the dev stage, append "-dev".
         EndpointRequests = 'cibic21-dynamodb-api-endpoint-requests'
         JournalingRequests = 'cibic21-dynamodb-api-journaling-requests'
+        ModeratedJournalingRequests = 'cibic21-dynamodb-moderated-journaling-requests'
+        RideData = 'cibic21-dynamodb-ride-data'
+        FilteredJournalingData = 'cibic21-dynamodb-exhibit-filtered-journaling-data'
+        RawSurveyResponses = 'cibic21-dynamodb-raw-survey-responses'
 
-    # class S3Bucket():
-        # SurveyMedia = # TBD
+    class Postgres():
+        # By default, table names are for the prod stage. For the dev stage, append "_dev".
+        Rides = 'cibic21_rides'
+        WaypointsRaw = 'cibic21_waypoints_raw'
+        WaypointsSnapped = 'cibic21_waypoints_snapped'
+        UserEnrollments = 'cibic21_user_enrollments'
+
+    class S3Bucket():
+        JournalingImages = 'cibic21-s3-journaling-images'
 
     # class Sns():
         # EndpointRequestProcessed = # TBD

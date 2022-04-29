@@ -94,18 +94,31 @@ def lambda_handler(event, context):
             try: 
                 # Create a new item for processed journals.
                 # Structures data for table to allow "adjacency list" type queries. 
-                journalingDataTable.put_item(Item = {
-                    'userId': journal_data['userId'],
-                    'sortKey':  entryType +'-'+ str(time_for_sort),
-                    'created': time_now,
-                    'request': request,
-                    'dbVersion': 0,
-                    'role': journal_data['role'],
-                    'media': journal_data['image'],
-                    'type': journal_data['type'],
-                    'answers': journal_data['answers'],
-                    'journal': journal_data['journal']
-                })
+                if entryType == "reflection":
+                    journalingDataTable.put_item(Item = {
+                        'userId': journal_data['userId'],
+                        'sortKey':  entryType +'-'+ str(time_for_sort),
+                        'created': time_now,
+                        'request': request,
+                        'dbVersion': 0,
+                        'role': journal_data['role'],
+                        'media': journal_data['image'],
+                        'type': journal_data['type'],
+                        'answers': journal_data['answers'],
+                        'journal': journal_data['journal']
+                    })
+                if entryType == "live":
+                    journalingDataTable.put_item(Item = {
+                        'userId': journal_data['userId'],
+                        'sortKey':  entryType +'-'+ str(time_for_sort),
+                        'created': journal_data['time'],
+                        'request': request,
+                        'dbVersion': 0,
+                        'role': journal_data['role'],
+                        'type': journal_data['type'],
+                        'data': journal_data['data'],
+                    })
+
             except:
                 print('issue adding users journal entry.')
                 err = reportError() 

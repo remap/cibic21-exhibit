@@ -124,13 +124,14 @@ def lambda_handler(event, context):
                 err = reportError() 
                 continue
 
-            # store processed id here for SNS notify later
-            processedIds.append(    
-                {   
-                    "userId": journal_data['userId'],
-                    "sortKey": entryType +'-'+ str(time_for_sort)
-                }
-            )
+            if entryType == "reflection":
+                 # store processed id here for SNS notify later
+                processedIds.append(    
+                    {   
+                        "userId": journal_data['userId'],
+                        "sortKey": entryType +'-'+ str(time_for_sort)
+                    }
+                )
 
         try:
             # Tries to publish a notification to the proper channels.

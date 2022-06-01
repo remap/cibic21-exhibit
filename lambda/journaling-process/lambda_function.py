@@ -12,10 +12,12 @@ dynamoDbResource = boto3.resource('dynamodb')
 
 snsTopicArn = os.environ['ENV_VAR_SNS_TOPIC_JOURNALING_DATA_READY']
 journalingDataTableName = os.environ['ENV_VAR_DYNAMODB_JOURNALING_DATA_TABLE']
+rideMetaDataTableName = 'cibic21-dynamodb-ride-data'#os.environ['ENV_VAR_DYNAMODB_JOURNALING_DATA_TABLE']
 
 def lambda_handler(event, context):
     processedIds = [] # holds item keys to send to SNS after processing.
     journalingDataTable = dynamoDbResource.Table(journalingDataTableName) # table client for processed journals.
+    journalingDataTable = dynamoDbResource.Table(rideMetaDataTableName) # table client for processed journals.
     if 'Records' in event:
         # There are record updates from the jounral requests table.
         for rec in event['Records']:
@@ -132,17 +134,18 @@ def lambda_handler(event, context):
                         "sortKey": entryType +'-'+ str(time_for_sort)
                     }
                 )
-
-        try:
-            # Tries to publish a notification to the proper channels.
-            snsClient.publish(
-                    TopicArn=snsTopicArn,
-                    Message=json.dumps(processedIds),
-                    Subject='journaling-raw',
-                )
-        except:
-            err = reportError()
-            return lambdaReply(420, str(err)) 
+        if len(processedIds) > 0:
+            # There are ids that need more actions applied.
+            try:
+                # Tries to publish a notification to the proper channels.
+                snsClient.publish(
+                        TopicArn=snsTopicArn,
+                        Message=json.dumps(processedIds),
+                        Subject='journaling-raw',
+                    )
+            except:
+                err = reportError()
+                return lambdaReply(420, str(err)) 
     else:
         return malformedMessageReply()
 

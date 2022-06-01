@@ -4,7 +4,7 @@ import os
 import uuid
 import time
 from common.cibic_common import *
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 snsClient = boto3.client('sns')
 dynamoDbClient = boto3.client('dynamodb')
@@ -12,12 +12,11 @@ dynamoDbResource = boto3.resource('dynamodb')
 
 snsTopicArn = os.environ['ENV_VAR_SNS_TOPIC_JOURNALING_DATA_READY']
 journalingDataTableName = os.environ['ENV_VAR_DYNAMODB_JOURNALING_DATA_TABLE']
-rideMetaDataTableName = 'cibic21-dynamodb-ride-data'#os.environ['ENV_VAR_DYNAMODB_JOURNALING_DATA_TABLE']
+rideMetaDataTableName = 'cibic21-dynamodb-ride-data' #os.environ['ENV_VAR_DYNAMODB_JOURNALING_DATA_TABLE']
 
 def lambda_handler(event, context):
     processedIds = [] # holds item keys to send to SNS after processing.
     journalingDataTable = dynamoDbResource.Table(journalingDataTableName) # table client for processed journals.
-    journalingDataTable = dynamoDbResource.Table(rideMetaDataTableName) # table client for processed journals.
     if 'Records' in event:
         # There are record updates from the jounral requests table.
         for rec in event['Records']:
@@ -26,9 +25,16 @@ def lambda_handler(event, context):
             # Set some scoped vars for the parsing operation.
             request = None
             journal_data = None
+            ride_data = None
 
-            # get time of processing 
-            time_now = datetime.now().astimezone(tz=timezone.utc).isoformat() # time for system resources
+            one_day = timedelta(days=1) # cut off horizon for ride query 
+            
+            time_now = datetime.now() 
+            time_now_formatted = time_now.astimezone(tz=timezone.utc).isoformat() # time for system resources
+            
+            time_a_day_ago = time_now - one_day
+            time_a_day_ago_formatted = time_a_day_ago.astimezone(tz=timezone.utc).isoformat() # time for system resources
+            
             time_for_sort = int(time.time()) # time for sorting
 
             try: 
@@ -54,21 +60,31 @@ def lambda_handler(event, context):
                 err = reportError() 
                 continue
 
-            try:
-                # Tries getting external data to join into journal entries
-                # TODO: Get user/ride information
-                pass
-            except:
-                # There was an issue getting data about user or ride.
-                print('issue getting external data.')
-                err = reportError() 
-                pass
-
             # detirmine entry type.
             entryType = 'unclassified'
             if journal_data['type'] in ['reflection', 'live']:
                 entryType = journal_data['type']
-            
+
+            if entryType == "reflection":
+                # reflection types might have assocaited rides posted.Check system for latest rides by rider. 
+                try:
+                    # Tries getting external data to join into journal entries
+                    rideMetaDataTable = dynamoDbResource.Table(rideMetaDataTableName) # table client for processed journals.
+                    # TODO: Get user/ride information
+                    response  = rideMetaDataTable.query(
+                        IndexName='userId-endTime-index',
+                        KeyConditionExpression=Key('userId').eq(journal_data['userId']) & Key('endTime').between(time_a_day_ago_formatted , time_now_formatted),
+                        ScanIndexForward=False
+                    )
+                    if len(response['Items']) > 0:
+                        ride_data = unmarshallAwsDataItem(response['Items'][0])
+                    pass
+                except:
+                    # There was an issue getting data about user or ride.
+                    print('issue getting external data.')
+                    err = reportError() 
+                    pass
+           
             try:
                 # Tries updating user profiles.
                 # Upserts the 'profile' of a user which contains highlevel information about their journaled rides.            
@@ -84,7 +100,7 @@ def lambda_handler(event, context):
                         '#num_live': 'numLive'
                     },
                     ExpressionAttributeValues={
-                        ':last_update': time_now,
+                        ':last_update': time_now_formatted,
                         ':num_reflections': 1 if entryType == 'reflection' else 0,
                         ':num_live': 1 if entryType == 'live' else 0
                     }
@@ -100,14 +116,15 @@ def lambda_handler(event, context):
                     journalingDataTable.put_item(Item = {
                         'userId': journal_data['userId'],
                         'sortKey':  entryType +'-'+ str(time_for_sort),
-                        'created': time_now,
+                        'created': time_now_formatted,
                         'request': request,
                         'dbVersion': 0,
                         'role': journal_data['role'],
                         'media': journal_data['image'],
                         'type': journal_data['type'],
                         'answers': journal_data['answers'],
-                        'journal': journal_data['journal']
+                        'journal': journal_data['journal'],
+                        'ride': ride_data
                     })
                 if entryType == "live":
                     journalingDataTable.put_item(Item = {

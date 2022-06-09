@@ -43,7 +43,7 @@ def lambda_handler(event, context):
                 try:
                     # New Ride was added to system from PAVE, Check for journal based on timestamp
                     SNS_data = rec['Sns']
-                    ready_ride = JSON.parse(SNS_data['Message'])['rideData']
+                    ready_ride = json.loads(SNS_data['Message'])['rideData']
 
                     # Formats ride start time to seconds for sortkey
                     time_ride_started = int( datetime.strptime(ready_ride['startTime'], '%Y-%m-%dT%H:%M:%S.%f%z').timestamp() )

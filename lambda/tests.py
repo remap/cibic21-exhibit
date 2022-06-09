@@ -1,9 +1,36 @@
 # tests
 
 import requests
+import json
+import time
+
+from datetime import datetime, timezone, timedelta
+
+test_username = "b2756d6e-906d-46a9-8031-a3f60956b6dc"
+
 
 def PostRideData():
-	data = '''{
+	username = test_username
+	flow= "testFlow"
+	rideID = "5769"
+
+	min_30 = timedelta(minutes=30)
+
+	time_now = datetime.now()
+	time_30_min_ago = time_now - min_30	 
+	
+	time_start_formatted = time_now.astimezone(tz=timezone.utc).isoformat() # time for system resources
+	time_end_formatted = time_30_min_ago.astimezone(tz=timezone.utc).isoformat() # time for system resources
+
+
+
+	endTime = "2022-05-27T17:08:42.000Z"
+	startTime = "2022-05-27T17:08:42.000Z"
+
+	createdAt = "2022-05-27T04:12:13.679Z"
+	updatedAt = "2022-05-27T04:12:13.679Z"
+
+	data = {
 		"trajectoryData": {
 			"waypoints": [
 				{
@@ -18,30 +45,31 @@ def PostRideData():
 			], 
 			"encoded": "ksxnEpdxpUmCgC{@w@OMz@yAt@qAJSGGIIsAmAu@q@QO][eAaAOMOMSSQQw@s@GEEEQOaA}@y@s@UWKKUSMMCAcB}Ay@w@CCk@g@IGMOUQm@i@CCUUcA}@e@c@CAB@LLMMCCcA{@s@o@w@q@II{@u@QOMMOO[[s@u@IEIIAAk@i@e@a@AAg@e@QO{@w@SQFa@KKfBaD?GLWLUFGfBaDBE?HCCGGsBiBYWIIk@g@u@q@F[_@[US}@y@QOA]MJONCHoBbCC?ORCh@EFWXQVKLyAhBA@UX}@fA{@dAQT@AQMUWYYUUc@_@SUA???wA}A_@e@oAqAOQu@y@CCEEQS]a@Ea@AAJOLWHQ`@u@JUVi@P]JYb@_A~AqD|@mBHMBId@gADILYWQk@SaA_@eAa@c@Q]MWKo@WOGMGICYKUKcBq@IEaA_@mAe@CAy@]IEOE?Aa@OyB_A]Oe@Q[Mo@UICMEKGIEe@Q]M_@OaAa@IC_@OGCGC[Mc@SOINHb@RZLFBFB^NHB`A`@PFLF\\Ld@PDBB@JFLDDBECMEFW@GNgABIHm@VoADSDSBGZaAb@oABIRi@n@eB\\cANMDGiBwAUOECOOSSOYeAgBMUU_@e@y@MUXUzCcCv@o@JKDKDI@K?MMeBG{@IuACa@GaANKt@i@fBsAWeAKWMUKQQQ}@h@gAn@iBjA}CnBk@\\uAx@]Ta@TYs@KWCESg@mBwEi@sAi@qAEKoB{EaEnCDHEIMYaAcCGMSi@Sg@KUBDFNTj@Pd@FLnA|C{@j@EBqBpAaAd@GLBDP\\L^Zx@HN?AJIECOSQg@CG??"
 		},
-		"flow": "testFlow", 
-		"endTime": "2022-05-27T17:08:42.000Z", 
-		"startTime": "2022-05-27T16:40:18.000Z", 
+		"flow": {}, 
+		"endTime": endTime, 
+		"startTime": startTime, 
 		"cibicUser": {
-			"roleApprovedAt": null, 
+			"roleApprovedAt": None, 
 			"role": "testRole", 
-			"username": "testuserId", 
+			"username": username, 
 			"_id": "628c0e22664d59c413e69651"
-		}, 
-		"username": "b2756d6e-906d-46a9-8031-a3f60956b6dc", 
-		"_id": "5769", 
-		"createdAt": "2022-05-27T04:12:13.679Z", 
-		"updatedAt": "2022-05-27T04:12:13.679Z", 
+		},
+		"username": username, 
+		"_id": rideID, 
+		"createdAt": createdAt, 
+		"updatedAt": updatedAt, 
 		"__v": 0, 
-		"id": "5769"
-		}'''
+		"id": rideID
+	}
 
-	x = requests.post('https://m609zw34z5.execute-api.us-west-1.amazonaws.com/prod/ride-data', data=data, headers={'x-api-key': 'xOsPBbAKQjAnfmQ11O2haoocwbwXZ7map1cEUcgf'})
+	x = requests.post('https://m609zw34z5.execute-api.us-west-1.amazonaws.com/prod/ride-data', data=json.dumps(data), headers={'x-api-key': 'xOsPBbAKQjAnfmQ11O2haoocwbwXZ7map1cEUcgf'})
+	return x
 
 
 def PostJournalData():
-	data = '''{
+	data = {
 		"type": "reflection", 
-		"answers": [null, null, null, null], 
+		"answers": [None, None, None, None], 
 		"journal": [
 			{
 				"prompt": "Rate your commute satisfaction:", 
@@ -81,39 +109,43 @@ def PostJournalData():
 			{
 				"prompt": "Upload photos of your ride:", 
 				"formType": "photo", 
-				"optional": true
+				"optional": True
 			}
 		], 
-		"image": null, 
-		"userId": "970a9ce7-540c-4269-8cf5-5a0fc63dbfea", 
+		"image": None, 
+		"userId": test_username, 
 		"paveData": {
-			"role": null, 
-			"username": "970a9ce7-540c-4269-8cf5-5a0fc63dbfea", 
-			"name": "CiBiCManagement", 
-			"qs": "username=970a9ce7-540c-4269-8cf5-5a0fc63dbfea&name=CiBiCManagement&timestamp=2022-06-07T17:58:27.703437-05:00"
+			"role": "testRole", 
+			"username": test_username, 
+			"name": "TEST USER", 
+			"qs": "username="+test_username+"&name=CiBiCManagement&timestamp=2022-06-07T17:58:27.703437-05:00"
 		}, 
-		"role": null
-		}'''
-	x = requests.post( "https://73oajmp3pd.execute-api.us-west-1.amazonaws.com/prod", data=data, headers={'x-api-key': 'xOsPBbAKQjAnfmQ11O2haoocwbwXZ7map1cEUcgf', 'Content-Type': 'application/json'} )
+		"role": None
+		}
+	x = requests.post( "https://73oajmp3pd.execute-api.us-west-1.amazonaws.com/prod", data=json.dumps(data), headers={'x-api-key': 'xOsPBbAKQjAnfmQ11O2haoocwbwXZ7map1cEUcgf', 'Content-Type': 'application/json'} )
+	return x
 
 
 # submit ride, submit journal
-PostRideData()
-PostJournalData()
+result1 = PostRideData()
+print(result1.status_code, result1.content)
+time.sleep(10)
+result2 = PostJournalData()
+print(result2.status_code, result2.text)
 
 # submit journal, submit ride
-PostJournalData()
-PostRideData()
-
-# submit journal for old ride after cut-off (accepted)
-# submit journal for old ride before cut-off (declined)
-
-# submit ride, submit ride, submit journal
-PostRideData()
-PostRideData()
-PostJournalData()
-
-# submit journal, submit journal, submit ride
-PostJournalData()
-PostJournalData()
-PostRideData()
+#PostJournalData()
+#PostRideData()
+#
+## submit journal for old ride after cut-off (accepted)
+## submit journal for old ride before cut-off (declined)
+#
+## submit ride, submit ride, submit journal
+#PostRideData()
+#PostRideData()
+#PostJournalData()
+#
+## submit journal, submit journal, submit ride
+#PostJournalData()
+#PostJournalData()
+#PostRideData()

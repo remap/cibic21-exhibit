@@ -2,7 +2,6 @@ import json
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 import os
-import uuid
 import time
 from common.cibic_common import *
 from datetime import datetime, timezone, timedelta
@@ -13,11 +12,10 @@ dynamoDbResource = boto3.resource('dynamodb')
 
 snsTopicArn = os.environ['ENV_VAR_SNS_TOPIC_JOURNALING_DATA_READY']
 journalingDataTableName = os.environ['ENV_VAR_DYNAMODB_JOURNALING_DATA_TABLE']
-rideMetaDataTableName = 'cibic21-dynamodb-ride-data' #os.environ['ENV_VAR_DYNAMODB_JOURNALING_DATA_TABLE']
 
 def lambda_handler(event, context):
     processedIds = [] # holds item keys to send to SNS after processing.
-    journalingDataTable = dynamoDbResource.Table(journalingDataTableName) # table client for processed journals.
+    journalingDataTable = dynamoDbResource.Table(journalingDataTableName)  # table client for processed journals.
     if 'Records' in event:
         # There are record updates from the jounral requests table.
         for rec in event['Records']:
@@ -26,7 +24,6 @@ def lambda_handler(event, context):
             # Set some scoped vars for the parsing operation.
             request = None
             journal_data = None
-            ride_data = None
 
             one_day = timedelta(days=1) # cut off horizon for ride query 
             
@@ -37,49 +34,6 @@ def lambda_handler(event, context):
             time_a_day_ago_formatted = time_a_day_ago.astimezone(tz=timezone.utc).isoformat() # time for system resources
             
             time_for_sort = int(time.time()) # time for sorting
-
-            # Check if record is a SNS event
-            if "Sns" in rec:
-                try:
-                    # New Ride was added to system from PAVE, Check for journal based on timestamp
-                    SNS_data = rec['Sns']
-                    ready_ride = json.loads(SNS_data['Message'])['rideData']
-
-                    # Formats ride start time to seconds for sortkey
-                    time_ride_started = int( datetime.strptime(ready_ride['startTime'], '%Y-%m-%dT%H:%M:%S.%f%z').timestamp() )
-
-                    # Creates sort keys formated to look for reflections that were submitted between 'time_ride_started' and now
-                    sortKeyStart = "reflection-"+str(time_ride_started)
-                    sortKeyEnd = "reflection-"+str(time_for_sort)
-
-                    # Check for any journal entered by the user that was completed between now and ride start time
-                    response = journalingDataTable.query(
-                            KeyConditionExpression=Key('userId').eq( ready_ride['userId'] ) & Key('sortKey').between(sortKeyStart , sortKeyEnd),
-                            ScanIndexForward=False)
-                    
-                    if len(response['Items']) > 0:
-                        # An journal item was submitted for this ride.
-                        journal_data = unmarshallAwsDataItem(response['Items'][0])
-                        # Update journal item to have ride data.
-                        journalingDataTable.update_item(
-                            Key={
-                                'userId': journal_data['userId'], 
-                                'sortKey': journal_data['sortKey']
-                            },
-                            UpdateExpression = "SET #ride = :ride",
-                            ExpressionAttributeNames={
-                                '#ride': 'ride',
-                            },
-                            ExpressionAttributeValues={
-                                ':ride': ready_ride,
-                            }
-                        )
-                    pass # else pass - journal will be entered later.
-                except:
-                    # There was an issue getting data from the record.
-                    print('issue parsing data from a SNS record.')
-                    err = reportError()
-                    continue 
 
             # Check if record is a dynamoDB event
             if "dynamodb" in rec:
@@ -111,26 +65,6 @@ def lambda_handler(event, context):
                 if journal_data['type'] in ['reflection', 'live']:
                     entryType = journal_data['type']
 
-                if entryType == "reflection":
-                    # reflection types might have assocaited rides posted. Check system for latest rides by rider. 
-                    # Queries "ride meta data" table for most recent ride. If one exists - sets as "ride_data" for use in upsert. 
-                    try:
-                        # Queries "ride meta data" table for most recent ride. 
-                        rideMetaDataTable = dynamoDbResource.Table(rideMetaDataTableName) # table client for processed journals.
-                        response  = rideMetaDataTable.query(
-                            IndexName='userId-endTime-index',
-                            KeyConditionExpression=Key('userId').eq(journal_data['userId']) & Key('endTime').between(time_a_day_ago_formatted , time_now_formatted),
-                            ScanIndexForward=False
-                        )
-                        if len(response['Items']) > 0:
-                            # sets as "ride_data" for use in upsert
-                            ride_data = unmarshallAwsDataItem(response['Items'][0])
-                        pass
-                    except:
-                        # There was an issue getting data about user or ride.
-                        print('issue getting external data.')
-                        err = reportError() 
-                        pass
                 
                 # Tries updating user profile. Profiles contain highlevel data about rides, flow, journal entries. 
                 try:
@@ -172,8 +106,7 @@ def lambda_handler(event, context):
                             'media': journal_data['image'],
                             'type': journal_data['type'],
                             'answers': journal_data['answers'],
-                            'journal': journal_data['journal'],
-                            'ride': ride_data
+                            'journal': journal_data['journal']
                         })
                     if entryType == "live":
                         journalingDataTable.put_item(Item = {
@@ -193,7 +126,7 @@ def lambda_handler(event, context):
                 
                 # if entry type is 'reflection' add it to a list to send via SNS to continue processing for censor and PII.
                 if entryType == "reflection":
-                     # store processed id here for SNS notify later
+                    # store processed id here for SNS notify later
                     processedIds.append(    
                         {   
                             "userId": journal_data['userId'],

@@ -48,6 +48,9 @@ def lambda_handler(event, context):
                         # Parse AWS structured data into a python formatted dict.
                         request = unmarshallAwsDataItem(item)
 
+                        if not request["processed"]:
+                            continue
+
                         # Print some info to cloudwatch for debugging
                         print('processing journaling request {} ({}), data {}'
                                 .format(request['requestId'], request['timestamp'], request['body']))

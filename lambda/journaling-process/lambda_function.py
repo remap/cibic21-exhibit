@@ -33,7 +33,7 @@ def lambda_handler(event, context):
             time_a_day_ago = time_now - one_day
             time_a_day_ago_formatted = time_a_day_ago.astimezone(tz=timezone.utc).isoformat() # time for system resources
             
-            time_for_sort = int(time.time()) # time for sorting
+            time_for_sort = int(time.time()) # default to processed time.
 
             # Check if record is a dynamoDB event
             if "dynamodb" in rec:
@@ -48,6 +48,9 @@ def lambda_handler(event, context):
                         # Parse AWS structured data into a python formatted dict.
                         request = unmarshallAwsDataItem(item)
 
+                        # The timestamp on the moderated journal table is used for our sort key
+                        time_for_sort = request['timestamp']
+
                         if not request["processed"]:
                             continue
 
@@ -57,6 +60,24 @@ def lambda_handler(event, context):
 
                         # The request body is stored as a string. Let's unmarshal it into a dict.
                         journal_data = json.loads( request['body'] )
+
+                    if rec['eventName'] == 'MODIFY':
+                        # Grab the new image of the record that was modified.
+                        item = rec['dynamodb']['NewImage']
+
+                        # Parse AWS structured data into a python formatted dict.
+                        request = unmarshallAwsDataItem(item)
+
+                         # The timestamp on the moderated journal table is used for our sort key
+                        time_for_sort = request['timestamp']
+
+                        # Print some info to cloudwatch for debugging
+                        print('modified journaling request {} ({}), data {}'
+                                .format(request['requestId'], request['timestamp'], request['body']))
+
+                        # The request body is stored as a string. Let's unmarshal it into a dict.
+                        journal_data = json.loads( request['body'] )
+
                 except:
                     # There was an issue getting data from the record.
                     print('issue parsing data from record.')
@@ -101,7 +122,7 @@ def lambda_handler(event, context):
                     if entryType == "reflection":
                         journalingDataTable.put_item(Item = {
                             'userId': journal_data['userId'],
-                            'sortKey':  entryType +'-'+ str(time_for_sort),
+                            'sortKey':  entryType +'-'+ time_for_sort,
                             'created': time_now_formatted,
                             'request': request,
                             'dbVersion': 0,
@@ -114,7 +135,7 @@ def lambda_handler(event, context):
                     if entryType == "live":
                         journalingDataTable.put_item(Item = {
                             'userId': journal_data['userId'],
-                            'sortKey':  entryType +'-'+ str(time_for_sort),
+                            'sortKey':  entryType +'-'+ time_for_sort,
                             'created': journal_data['time'],
                             'request': request,
                             'dbVersion': 0,
@@ -133,7 +154,7 @@ def lambda_handler(event, context):
                     processedIds.append(    
                         {   
                             "userId": journal_data['userId'],
-                            "sortKey": entryType +'-'+ str(time_for_sort)
+                            "sortKey": entryType +'-'+ time_for_sort
                         }
                     )
         

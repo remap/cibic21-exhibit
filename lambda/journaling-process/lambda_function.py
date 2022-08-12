@@ -127,7 +127,7 @@ def lambda_handler(event, context):
                             'request': request,
                             'dbVersion': 0,
                             'role': journal_data['role'],
-                            'media': journal_data['image'],
+                            'media': journal_data['images'],
                             'type': journal_data['type'],
                             'answers': journal_data['answers'],
                             'journal': journal_data['journal']
